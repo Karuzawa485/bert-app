@@ -212,10 +212,6 @@ DASHBOARD_TEMPLATE = """
 </html>
 """
 
-@app.route("/")
-def home():
-    return redirect(url_for("dashboard"))
-
 @app.route("/members")
 def members():
     return {"members": "Members1, Members2, Members3"}
