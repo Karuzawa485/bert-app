@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import './App.css';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function App() {
   const [selectedInbox, setSelectedInbox] = useState(null);
   const [catSrc, setCatSrc] = useState(null);
@@ -30,7 +32,7 @@ function App() {
     if (!responseText.trim()) return;
     setSendStatus('sending');
     try {
-      const res = await fetch('/respond', {
+      const res = await fetch(`${API_BASE}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

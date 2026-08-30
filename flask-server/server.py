@@ -32,6 +32,21 @@ def init_db():
         conn.close()
 
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+@app.route("/", methods=["GET", "OPTIONS"])
+def home():
+    if request.method == "OPTIONS":
+        return ("", 204)
+    return redirect(url_for("dashboard"))
+
+
 def load_responses():
     conn = get_db()
     try:
@@ -205,8 +220,10 @@ def home():
 def members():
     return {"members": "Members1, Members2, Members3"}
 
-@app.route("/respond", methods=["POST"])
+@app.route("/respond", methods=["POST", "OPTIONS"])
 def respond():
+    if request.method == "OPTIONS":
+        return ("", 204)
     data = request.get_json(force=True)
     response_text = data.get("response", "")
     if not response_text:
