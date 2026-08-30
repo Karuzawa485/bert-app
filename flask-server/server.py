@@ -1,8 +1,50 @@
-from flask import Flask, request, jsonify, render_template_string
+import json
+import os
+import sqlite3
+
+from flask import Flask, request, jsonify, render_template_string, redirect, url_for
 
 app = Flask(__name__)
 
-responses = []
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "responses.db")
+
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db()
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS responses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                text TEXT NOT NULL,
+                checklist TEXT NOT NULL DEFAULT '[]'
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def load_responses():
+    conn = get_db()
+    try:
+        rows = conn.execute("SELECT id, text, checklist FROM responses ORDER BY id DESC").fetchall()
+        return [
+            {"text": row["text"], "checklist": json.loads(row["checklist"])}
+            for row in rows
+        ]
+    finally:
+        conn.close()
+
+
+init_db()
 
 DASHBOARD_TEMPLATE = """
 <!DOCTYPE html>
@@ -155,6 +197,10 @@ DASHBOARD_TEMPLATE = """
 </html>
 """
 
+@app.route("/")
+def home():
+    return redirect(url_for("dashboard"))
+
 @app.route("/members")
 def members():
     return {"members": "Members1, Members2, Members3"}
@@ -165,15 +211,21 @@ def respond():
     response_text = data.get("response", "")
     if not response_text:
         return jsonify({"error": "Empty response"}), 400
-    responses.append({
-        "text": response_text,
-        "checklist": data.get("checklist", []),
-    })
+    checklist = data.get("checklist", [])
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO responses (text, checklist) VALUES (?, ?)",
+            (response_text, json.dumps(checklist)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
     return jsonify({"status": "ok", "message": "Response received"}), 201
 
 @app.route("/dashboard")
 def dashboard():
-    return render_template_string(DASHBOARD_TEMPLATE, responses=responses[::-1])
+    return render_template_string(DASHBOARD_TEMPLATE, responses=load_responses())
 
 if __name__ == "__main__":
     app.run(debug=True)
