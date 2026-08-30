@@ -8,6 +8,7 @@ function App() {
   const [catSrc, setCatSrc] = useState(null);
   const [responseText, setResponseText] = useState('');
   const [sendStatus, setSendStatus] = useState(null);
+  const [sendError, setSendError] = useState(null);
   const [checks, setChecks] = useState({ meals: false, okay: false, water: false });
   const [showAlbert, setShowAlbert] = useState(false);
   const [showPageCat, setShowPageCat] = useState(false);
@@ -31,6 +32,7 @@ function App() {
   const handleSendResponse = async () => {
     if (!responseText.trim()) return;
     setSendStatus('sending');
+    setSendError(null);
     try {
       const res = await fetch(`${API_BASE}/respond`, {
         method: 'POST',
@@ -42,12 +44,13 @@ function App() {
             .map((option) => option.label),
         }),
       });
-      if (!res.ok) throw new Error('Request failed');
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
       setSendStatus('sent');
       setResponseText('');
       setChecks({ meals: false, okay: false, water: false });
     } catch (err) {
       setSendStatus('error');
+      setSendError(`${err.message} (${API_BASE})`);
     }
   };
 
@@ -214,7 +217,7 @@ function App() {
               <p className="response-status response-sent">Sent!</p>
             )}
             {sendStatus === 'error' && (
-              <p className="response-status response-error">Failed to send, try again</p>
+              <p className="response-status response-error">{sendError || 'Failed to send, try again'}</p>
             )}
             <button
               type="button"
